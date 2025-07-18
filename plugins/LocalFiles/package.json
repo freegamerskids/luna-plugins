@@ -4,7 +4,7 @@
 	"author": {
 		"name": "lolwm",
 		"url": "https://github.com/freegamerskids",
-		"avatarUrl": "https://2.gravatar.com/avatar/eeaffef9eb9b436dccc58c6c44c9fe8c3528e83e3bf64e1c736a68dbe8c097d3"
+		"avatarUrl": "https://avatars.githubusercontent.com/u/60486718?v=4"
 	},
 	"main": "./src/index.tsx",
 	"type": "module"
