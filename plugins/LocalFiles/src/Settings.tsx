@@ -1,7 +1,7 @@
 import React from "react";
 
 import { LunaSettings, LunaSwitchSetting } from "@luna/ui";
-import { trace } from ".";
+import { trace } from "./index.safe";
 
 export const Settings = () => {
 	const [checked, setChecked] = React.useState(false);
