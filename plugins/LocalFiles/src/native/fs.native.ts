@@ -4,6 +4,8 @@ import { readFileSync } from "fs";
 import { access, constants, readdir } from "fs/promises";
 import { join, parse } from "path";
 
+import { IAudioMetadata, parseFile } from "music-metadata";
+
 const fileExists = async (path: string): Promise<boolean> => {
 	try {
 		await access(path, constants.F_OK);
@@ -26,7 +28,13 @@ export const loadFile = async (path: string): Promise<ArrayBuffer | false> => {
     }
 }
 
-export const getDirectoryContents = async (path: string): Promise<string[]> => {
+export const getDirectoryContents = async (path: string): Promise<{ path: string; metadata: IAudioMetadata }[]> => {
 	const files = await readdir(path, { withFileTypes: true });
-	return files.map((file) => join(path, file.name));
+	return Promise.all(files.map((file) => join(path, file.name)).map(async (path) => {
+		const metadata = await parseFile(path);
+		return {
+			path,
+			metadata,
+		}
+	}));
 }

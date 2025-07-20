@@ -1,0 +1,9 @@
+.playButton {
+    opacity: 0;
+    transition: opacity 0.1s ease-in-out, transform 60ms ease-in-out;
+}
+
+.playButton:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
