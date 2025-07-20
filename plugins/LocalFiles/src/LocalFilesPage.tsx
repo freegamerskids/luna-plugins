@@ -1,5 +1,5 @@
 import React from "react";
-import { getDirectoryContents } from "./fs.native";
+import { getDirectoryContents } from "./native/fs.native";
 import { settings } from "./Settings";
 import { idToFileMap, trace } from "./index.safe";
 import { redux } from "@luna/lib";

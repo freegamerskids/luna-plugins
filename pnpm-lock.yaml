@@ -43,6 +43,12 @@ importers:
 
   plugins/LocalFiles:
     dependencies:
+      '@hono/node-server':
+        specifier: ^1.17.1
+        version: 1.17.1(hono@4.8.5)
+      hono:
+        specifier: ^4.8.5
+        version: 4.8.5
       sanitize-filename:
         specifier: ^1.6.3
         version: 1.6.3
@@ -198,6 +204,12 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@hono/node-server@1.17.1':
+    resolution: {integrity: sha512-SY79W/C+2b1MyAzmIcV32Q47vO1b5XwLRwj8S9N6Jr5n1QCkIfAIH6umOSgqWZ4/v67hg6qq8Ha5vZonVidGsg==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@inrixia/helpers@3.20.0':
     resolution: {integrity: sha512-RkWZ8ZIdB3cpQvTcLsY3A8ux+4Q8PNZU0uDKJT2xVMAP0FvCsLNSJemRz9vlDalWBDkBhI9v0O/br3cF9vPnWw==}
@@ -451,6 +463,10 @@ packages:
   he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
+
+  hono@4.8.5:
+    resolution: {integrity: sha512-Up2cQbtNz1s111qpnnECdTGqSIUIhZJMLikdKkshebQSEBcoUKq6XJayLGqSZWidiH0zfHRCJqFu062Mz5UuRA==}
+    engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@3.0.0:
     resolution: {integrity: sha512-oWv4T4yJ52iKrufjnyZPkrN0CH3QnrUqdB6In1g5Fe1mia8GmF36gnfNySxoZtxD5+NmYw1EElVXiBk93UeskA==}
@@ -802,6 +818,10 @@ snapshots:
   '@esbuild/win32-x64@0.25.5':
     optional: true
 
+  '@hono/node-server@1.17.1(hono@4.8.5)':
+    dependencies:
+      hono: 4.8.5
+
   '@inrixia/helpers@3.20.0':
     dependencies:
       dequal: 2.0.3
@@ -1063,6 +1083,8 @@ snapshots:
       function-bind: 1.1.2
 
   he@1.2.0: {}
+
+  hono@4.8.5: {}
 
   html-encoding-sniffer@3.0.0:
     dependencies:

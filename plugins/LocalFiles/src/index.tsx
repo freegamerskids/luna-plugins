@@ -4,19 +4,27 @@ import { redux, observePromise } from "@luna/lib";
 import { Page } from "@luna/ui";
 
 import { unloads, trace, blobURLMap, idToFileMap } from "./index.safe";
-import { loadFile } from "./fs.native";
+import { loadFile } from "./native/fs.native";
 import { LocalFiles } from "./LocalFilesPage";
+import { settings } from "./Settings";
+import { audioMimes } from "./util";
+import { startWebserver, stopWebserver } from "./native/webserver.native";
 
 export { unloads, errSignal } from "./index.safe";
 export { Settings } from "./Settings";
 
 import folderSvg from "file://folder-open.svg";
-import { settings } from "./Settings";
-import { audioMimes } from "./util";
+
+const PORT = 51423;
 
 // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 //     play(event.target.files?.[0]?.name ?? "");
 // };
+
+startWebserver(PORT);
+unloads.add(() => {
+    stopWebserver();
+});
 
 const LocalFilesPage = Page.register("local-files", unloads, 
     <>
@@ -62,18 +70,6 @@ window.fetch = async function() {
                         fakeurl
                     ]
                 })
-            } else if (extension === "mp3") {
-                audioQuality = "HIGH";
-                manifestMimeType = "application/vnd.tidal.bts";
-                //fakeurl = `https://___.___/${fileName}`;
-                manifest = JSON.stringify({
-                    "mimeType": audioMimes[`.${extension}`],
-                    "codecs": extension,
-                    "encryptionType": "NONE",
-                    "urls": [
-                        fakeurl
-                    ]
-                })
             } else if (extension === "m4a") {
                 fakeurl = `https://___.___/${fileName}`;
                 audioQuality = "HIGH";
@@ -92,6 +88,18 @@ window.fetch = async function() {
                         </AdaptationSet>
                     </Period>
                 </MPD>`;
+            } else {
+                audioQuality = "HIGH";
+                manifestMimeType = "application/vnd.tidal.bts";
+                fakeurl = `http://localhost:${PORT}/${fileName}`;
+                manifest = JSON.stringify({
+                    "mimeType": audioMimes[`.${extension}`],
+                    "codecs": extension,
+                    "encryptionType": "NONE",
+                    "urls": [
+                        fakeurl
+                    ]
+                })
             }
 
             return new Response(JSON.stringify({
