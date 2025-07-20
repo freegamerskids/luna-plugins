@@ -3,125 +3,115 @@ import React from "react";
 import { redux, observePromise } from "@luna/lib";
 import { Page } from "@luna/ui";
 
-import { unloads, trace } from "./index.safe";
-import { loadFile } from "./loadfile.native";
+import { unloads, trace, blobURLMap, idToFileMap } from "./index.safe";
+import { loadFile } from "./fs.native";
+import { LocalFiles } from "./LocalFilesPage";
 
 export { unloads, errSignal } from "./index.safe";
 export { Settings } from "./Settings";
 
 import folderSvg from "file://folder-open.svg";
+import { settings } from "./Settings";
+import { audioMimes } from "./util";
 
-const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    play();
-};
+// const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+//     play(event.target.files?.[0]?.name ?? "");
+// };
 
 const LocalFilesPage = Page.register("local-files", unloads, 
     <>
-        <div>Local Files</div>
-        <input type="file" multiple accept=".mp3" onChange={handleFileChange} />
+        <LocalFiles />
+        {/* <input type="file" multiple accept=".mp3" onChange={handleFileChange} /> */}
     </>
 );
 
-const play = () => {
-    const id = 1;
-    const artist = {
-        id: "vendaxar",
-        name: "vendax",
-        type: "MAIN",
-        picture: "",
-    };
-    const album = {
-        id: "vndx",
-        title: "vendax",
-        cover: "",
-        vibrantColor: "#000000",
-        videoCover: undefined,
-        duration: 180,
-        streamStartDate: "1",
-        numberOfTracks: 1,
-        numberOfVideos: 0,
-        numberOfVolumes: 1,
-        releaseDate: "1",
-        releaseYear: null,
-        copyright: "",
-        type: "ALBUM",
-        version: null,
-        url: "/",
-        explicit: false,
-        upc: "PLACEHOLDER_UPC",
-        popularity: 0,
-        audioQuality: "LOSSLESS",
-        audioModes: [],
-        mediaMetadata: { tags: [] },
-        upload: false,
-        artist,
-        artists: [artist],
-        genre: null,
-        recordLabel: null,
-        allowStreaming: true,
-        streamReady: true,
-        payToStream: false,
-        adSupportedStreamReady: false,
-        djReady: false,
-        stemReady: false,
-        premiumStreamingOnly: false,
-    };
-    const mediaItem = {
-        type: "track",
-        item: {
-            id: 1,
-            contentType: "track" as "track",
-            title: "PLACEHOLDERR",
-            version: null,
-            duration: 180,
-            trackNumber: 1,
-            volumeNumber: 1,
-            streamStartDate: new Date().toISOString(),
-            releaseDate: new Date().toISOString(),
-            explicit: false,
-            popularity: 0,
-            artist,
-            artists: [artist],
-            album,
-            mixes: null,
-            allowStreaming: true,
-            streamReady: true,
-            payToStream: false,
-            adSupportedStreamReady: false,
-            djReady: false,
-            stemReady: false,
-            premiumStreamingOnly: false,
-            url: "",
-            replayGain: 0,
-            peak: 0,
-            editable: false,
-            audioQuality: "LOSSLESS",
-            audioModes: [],
-            mediaMetadata: { tags: [] },
-            upload: false,
-            genre: null,
-            recordLabel: null,
-            type: "ALBUM",
-            videoCover: undefined,
-            numberOfTracks: 1,
-            numberOfVideos: 0,
-            numberOfVolumes: 1,
-            releaseYear: null,
-            copyright: "",
-            upc: "PLACEHOLDER_UPC"
+const constantMock = window.fetch;
+window.fetch = async function() {
+    trace.log("Fetch arguments: ", arguments);
+    if (typeof arguments[0] === "string" && arguments[0].includes("___.___")) {
+        const fileName = arguments[0].split("___.___/")[1];
+        trace.log("Fetching file: ", fileName);
+        const file = await loadFile(decodeURIComponent(fileName));
+        if (file === false) {
+            trace.err("Failed to load file");
+            return new Response(null, { status: 404 });
         }
-    } as any;
-    redux.actions["content/LOAD_ALL_ALBUM_MEDIA_ITEMS_SUCCESS"]({
-        albumId: album.id,
-        mediaItems: [mediaItem],
-    });
-    redux.actions["playQueue/ADD_NOW"]({
-        context: { type: "UNKNOWN" },
-        mediaItemIds: [id],
-        fromIndex: 0,
-        overwritePlayQueue: true,
-    });
-};
+        return new Response(file, { status: 200 })
+    }
+    
+    if (typeof arguments[0] === "string" && arguments[0].includes("playbackinfo")) {
+        const url = new URL(arguments[0]);
+        const productId = url.pathname.split("/").reverse()[1];
+        if (productId && idToFileMap.has(productId)) {
+            const fileName = idToFileMap.get(productId)!;
+            const extension = fileName.split(".").pop()!;
+
+            let fakeurl = `file://${fileName}`;
+            let manifest = "";
+            let manifestMimeType = "";
+            let audioQuality = "";
+
+            if (extension === "flac") {
+                audioQuality = "LOSSLESS";
+                manifestMimeType = "application/vnd.tidal.bts";
+                manifest = JSON.stringify({
+                    "mimeType": audioMimes[`.${extension}`],
+                    "codecs": extension,
+                    "encryptionType": "NONE",
+                    "urls": [
+                        fakeurl
+                    ]
+                })
+            } else if (extension === "mp3") {
+                audioQuality = "HIGH";
+                manifestMimeType = "application/vnd.tidal.bts";
+                //fakeurl = `https://___.___/${fileName}`;
+                manifest = JSON.stringify({
+                    "mimeType": audioMimes[`.${extension}`],
+                    "codecs": extension,
+                    "encryptionType": "NONE",
+                    "urls": [
+                        fakeurl
+                    ]
+                })
+            } else if (extension === "m4a") {
+                fakeurl = `https://___.___/${fileName}`;
+                audioQuality = "HIGH";
+                manifestMimeType = "application/dash+xml";
+                manifest = `<?xml version='1.0' encoding='UTF-8'?>
+                <MPD xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:cenc="urn:mpeg:cenc:2013" xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd" profiles="urn:mpeg:dash:profile:isoff-main:2011" type="static" minBufferTime="PT3.993S" mediaPresentationDuration="PT2M46.726S">
+                    <Period id="0">
+                        <AdaptationSet id="0" contentType="audio" mimeType="audio/mp4" segmentAlignment="true">
+                            <Representation id="0" codecs="mp4a.40.2" bandwidth="321718" audioSamplingRate="44100">
+                                <SegmentTemplate timescale="44100" initialization="${fakeurl}" media="${fakeurl}" startNumber="1">
+                                    <SegmentTimeline>
+                                        <S d="176128" r="1"/>
+                                    </SegmentTimeline>
+                                </SegmentTemplate>
+                            </Representation>
+                        </AdaptationSet>
+                    </Period>
+                </MPD>`;
+            }
+
+            return new Response(JSON.stringify({
+                "trackId": Number(productId),
+                "assetPresentation": "FULL",
+                "audioMode": "STEREO",
+                "audioQuality": audioQuality,
+                "streamingSessionId": crypto.randomUUID(),
+                "manifestMimeType": manifestMimeType,
+                "manifestHash": "",
+                "manifest": btoa(manifest),
+            }), { status: 200, headers: { "Content-Type": "application/json" } });
+        }
+    }
+    // @ts-ignore
+    return constantMock.apply(this, arguments);
+}
+unloads.add(() => {
+    window.fetch = constantMock;
+});
 
 observePromise(unloads, "nav div section[role='menu']", 1000).then((elem) => {
     if (!elem) return trace.err("Failed to find menu");
@@ -135,6 +125,7 @@ observePromise(unloads, "nav div section[role='menu']", 1000).then((elem) => {
     localFileBtn.innerHTML = folderSvg + '<span data-wave-color="textDefault" data-wave-number-of-lines="1" class="wave-text-description-demi">Local Files</span>'
 
     localFileBtn.onclick = () => {
+        if (!settings.localFilesFolder) return trace.err("No local files folder set");
         LocalFilesPage.open();
     }
 
@@ -151,179 +142,77 @@ unloads.add(() => {
     lfAudioNode.remove();
 });
 
-const blobURLMap = new Map<string, string>();
-const idToFileURLMap = new Map<number, string>();
+// redux.intercept(["playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION", "playbackControls/MEDIA_PRODUCT_TRANSITION"], unloads, ({ mediaProduct: { productId, productType } }, action) => {
+//     trace.log("Intercepted action: " + action);
+//     trace.log("Product ID: " + productId);
+//     trace.log("idToFileMap: ", idToFileMap.keys().toArray());
+    
+//     if (typeof productId === "string" && idToFileMap.has(productId)) {
+//         (async () => {
+//             const fileName = idToFileMap.get(productId)!;
+//             const blobURL = blobURLMap.get(fileName);
+//             if (fileName && !blobURL) {
+//                 const file = await loadFile(fileName);
+//                 if (!file) return trace.err("Failed to load file");
+//                 const fileBlob = new Blob([file]);
+//                 const blobURL = URL.createObjectURL(fileBlob);
+//                 blobURLMap.set(fileName, blobURL);
 
-redux.intercept(["playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION", "playbackControls/MEDIA_PRODUCT_TRANSITION"], unloads, ({ mediaProduct: { productId, productType } }, action) => {
-    if (typeof productId === "number" && idToFileURLMap.has(productId)) {
-        (async () => {
-            const fileURL = idToFileURLMap.get(productId)!;
-            const blobURL = blobURLMap.get(fileURL);
-            if (fileURL && !blobURL) {
-                const file = await loadFile(fileURL);
-                if (!file) return trace.err("Failed to load file");
-                const fileBlob = new Blob([file]);
-                const blobURL = URL.createObjectURL(fileBlob);
-                blobURLMap.set(fileURL, blobURL);
+//                 const tempAudio = document.createElement("audio");
+//                 tempAudio.ondurationchange = () => {
+//                     const duration = tempAudio.duration;
 
-                const tempAudio = document.createElement("audio");
-                tempAudio.ondurationchange = () => {
-                    const duration = tempAudio.duration;
+//                     trace.log("Duration: " + duration);
+//                     switch (action) {
+//                         case "playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION":
+//                             redux.actions["playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION"]({
+//                                 mediaProduct: {
+//                                     productId,
+//                                     productType,
+//                                 },
+//                                 playbackContext: {
+//                                     actualDuration: duration,
+//                                 }
+//                             });
+//                             break;
+//                         case "playbackControls/MEDIA_PRODUCT_TRANSITION":
+//                             redux.actions["playbackControls/MEDIA_PRODUCT_TRANSITION"]({
+//                                 mediaProduct: {
+//                                     productId,
+//                                     productType,
+//                                 },
+//                                 playbackContext: {
+//                                     actualDuration: duration,
+//                                     actualAssetPresentation: "FULL",
+//                                     actualAudioMode: "STEREO",
+//                                     actualAudioQuality: "HIGH",
+//                                     actualProductId: productId.toString(),
+//                                     actualStreamType: "AUDIO",
+//                                     assetPosition: 0,
+//                                     bitDepth: 16,
+//                                     codec: "unknown",
+//                                     playbackSessionId: "",
+//                                     sampleRate: 44100,
+//                                     actualVideoQuality: "",
+//                                 }
+//                             });
+//                             break;
+//                     }
+//                     tempAudio.remove();
+//                 }
+//                 tempAudio.src = blobURL;
+//             }
 
-                    trace.log("Duration: " + duration);
-                    switch (action) {
-                        case "playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION":
-                            redux.actions["playbackControls/PREFILL_MEDIA_PRODUCT_TRANSITION"]({
-                                mediaProduct: {
-                                    productId: 151515,
-                                    productType,
-                                },
-                                playbackContext: {
-                                    actualDuration: duration,
-                                }
-                            });
-                            break;
-                        case "playbackControls/MEDIA_PRODUCT_TRANSITION":
-                            redux.actions["playbackControls/MEDIA_PRODUCT_TRANSITION"]({
-                                mediaProduct: {
-                                    productId: 151515,
-                                    productType,
-                                },
-                                playbackContext: {
-                                    actualDuration: duration,
-                                    actualAssetPresentation: "FULL",
-                                    actualAudioMode: "STEREO",
-                                    actualAudioQuality: "HIGH",
-                                    actualProductId: "151515",
-                                    actualStreamType: "AUDIO",
-                                    assetPosition: 0,
-                                    bitDepth: 16,
-                                    codec: "unknown",
-                                    playbackSessionId: "",
-                                    sampleRate: 44100,
-                                    actualVideoQuality: "",
-                                }
-                            });
-                            break;
-                    }
-                    tempAudio.remove();
-                }
-                tempAudio.src = blobURL;
-            }
+//             if (action === "playbackControls/MEDIA_PRODUCT_TRANSITION") {
+//                 lfAudioNode.src = blobURL!;
+//                 lfAudioNode.play();
+//             }
+//         })();
+//         return true;
+//     }
+// })
 
-            if (action === "playbackControls/MEDIA_PRODUCT_TRANSITION") {
-                lfAudioNode.src = blobURL!;
-                lfAudioNode.play();
-            }
-        })();
-        return true;
-    }
-})
-
-redux.intercept("playQueue/ADD_NOW", unloads, (state, action) => {
-    for (const item of state.mediaItemIds) {
-        if (typeof item === "string" && item.startsWith("file://")) {
-            const randomId = Math.floor(Math.random() * 10000000);
-            const artist = {
-                id: "vendaxar",
-                name: "vendax",
-                type: "MAIN",
-                picture: "",
-            };
-            const album = {
-                id: "vndx",
-                title: "vendax",
-                cover: "",
-                vibrantColor: "#000000",
-                videoCover: undefined,
-                duration: 180,
-                streamStartDate: "1",
-                numberOfTracks: 1,
-                numberOfVideos: 0,
-                numberOfVolumes: 1,
-                releaseDate: "1",
-                releaseYear: null,
-                copyright: "",
-                type: "ALBUM",
-                version: null,
-                url: "/",
-                explicit: false,
-                upc: "PLACEHOLDER_UPC",
-                popularity: 0,
-                audioQuality: "LOSSLESS",
-                audioModes: [],
-                mediaMetadata: { tags: [] },
-                upload: false,
-                artist,
-                artists: [artist],
-                genre: null,
-                recordLabel: null,
-                allowStreaming: true,
-                streamReady: true,
-                payToStream: false,
-                adSupportedStreamReady: false,
-                djReady: false,
-                stemReady: false,
-                premiumStreamingOnly: false,
-            };
-            const mediaItem = {
-                type: "track",
-                item: {
-                    id: randomId,
-                    contentType: "track" as "track",
-                    title: "PLACEHOLDERR",
-                    version: null,
-                    duration: 180,
-                    trackNumber: 1,
-                    volumeNumber: 1,
-                    streamStartDate: new Date().toISOString(),
-                    releaseDate: new Date().toISOString(),
-                    explicit: false,
-                    popularity: 0,
-                    artist,
-                    artists: [artist],
-                    album,
-                    mixes: null,
-                    allowStreaming: true,
-                    streamReady: true,
-                    payToStream: false,
-                    adSupportedStreamReady: false,
-                    djReady: false,
-                    stemReady: false,
-                    premiumStreamingOnly: false,
-                    url: "",
-                    replayGain: 0,
-                    peak: 0,
-                    editable: false,
-                    audioQuality: "LOSSLESS",
-                    audioModes: [],
-                    mediaMetadata: { tags: [] },
-                    upload: false,
-                    genre: null,
-                    recordLabel: null,
-                    type: "ALBUM",
-                    videoCover: undefined,
-                    numberOfTracks: 1,
-                    numberOfVideos: 0,
-                    numberOfVolumes: 1,
-                    releaseYear: null,
-                    copyright: "",
-                    upc: "PLACEHOLDER_UPC"
-                }
-            } as any;
-            redux.actions["content/LOAD_SINGLE_MEDIA_ITEM_SUCCESS"]({
-                mediaItem: mediaItem,
-            });
-            idToFileURLMap.set(randomId, item);
-        }
-    }
-})
-
-redux.actions["playQueue/ADD_NOW"]({
-    context: { type: "UNKNOWN" },
-    mediaItemIds: [""],
-    fromIndex: 0,
-});
+//trace.log(redux.store.getState());
 
 // (async () => {
 //     const file = await loadFile("<file name here>");

@@ -1,7 +1,7 @@
 import sanitize from "sanitize-filename";
 
 import { readFileSync } from "fs";
-import { access, constants } from "fs/promises";
+import { access, constants, readdir } from "fs/promises";
 import { join, parse } from "path";
 
 const fileExists = async (path: string): Promise<boolean> => {
@@ -24,4 +24,9 @@ export const loadFile = async (path: string): Promise<ArrayBuffer | false> => {
     catch (e) {
         return false
     }
+}
+
+export const getDirectoryContents = async (path: string): Promise<string[]> => {
+	const files = await readdir(path, { withFileTypes: true });
+	return files.map((file) => join(path, file.name));
 }

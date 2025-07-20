@@ -1,17 +1,31 @@
 import React from "react";
 
-import { LunaSettings, LunaSwitchSetting } from "@luna/ui";
-import { trace } from "./index.safe";
+import { ReactiveStore } from "@luna/core";
+import { LunaButtonSetting, LunaSettings } from "@luna/ui";
+import { showOpenDialog } from "@luna/lib.native";
+
+async function getLocalFilesFolder() {
+	const { canceled, filePaths } = await showOpenDialog({
+		properties: ["openDirectory", "createDirectory"],
+	});
+	if (!canceled) return filePaths[0];
+}
+
+type Settings = {
+	localFilesFolder?: string;
+};
+export const settings = await ReactiveStore.getPluginStorage<Settings>("LocalFiles", {
+	localFilesFolder: undefined,
+});
 
 export const Settings = () => {
-	const [checked, setChecked] = React.useState(false);
-	const onChange = React.useCallback((_: React.ChangeEvent<HTMLInputElement>, checked?: boolean) => {
-		trace.msg.log(`Example switch is now ${checked ? "on" : "off"}`);
-		setChecked(checked ?? false);
-	}, []);
 	return (
 		<LunaSettings>
-			<LunaSwitchSetting title="Example Switch" checked={checked} desc="This is an example switch" onChange={onChange} />
+			<LunaButtonSetting title="Set Local Files Folder" desc="Choose a folder to load local files from" onClick={() => getLocalFilesFolder().then((folder) => {
+				if (folder) {
+					settings.localFilesFolder = folder;
+				}
+			})} />
 		</LunaSettings>
 	);
 };
