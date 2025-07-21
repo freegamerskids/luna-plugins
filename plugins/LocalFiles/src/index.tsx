@@ -17,10 +17,6 @@ import folderSvg from "file://folder-open.svg";
 
 const PORT = 51423;
 
-// const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//     play(event.target.files?.[0]?.name ?? "");
-// };
-
 startWebserver(PORT);
 unloads.add(() => {
     stopWebserver();
@@ -29,7 +25,6 @@ unloads.add(() => {
 const LocalFilesPage = Page.register("local-files", unloads, 
     <>
         <LocalFiles />
-        {/* <input type="file" multiple accept=".mp3" onChange={handleFileChange} /> */}
     </>
 );
 
@@ -219,19 +214,3 @@ unloads.add(() => {
 //         return true;
 //     }
 // })
-
-//trace.log(redux.store.getState());
-
-// (async () => {
-//     const file = await loadFile("<file name here>");
-//     if (!file) return trace.err("Failed to load file");
-//     const fileBlob = new Blob([file]);
-
-    
-//     lfAudioNode.src = URL.createObjectURL(fileBlob);
-
-    
-//     lfAudioNode.play();
-
-    
-// })()
